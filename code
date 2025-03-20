@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABS EMON CHAT BOT</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        #startButton {
+            padding: 20px 40px;
+            font-size: 1.5em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        #startButton:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        #chatContainer {
+            width: 400px;
+            height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        #chatMessages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #e9ecef;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 18px;
+            max-width: 75%;
+            line-height: 1.4;
+            font-size: 0.95em;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f1f0f0;
+            color: black;
+            margin-right: auto;
+        }
+
+        #inputGroup {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #ccc;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+            font-size: 1em;
+        }
+
+        #sendBtn {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #sendBtn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <button id="startButton" onclick="startChat()">Start Chat EMON</button>
+
+    <div id="chatContainer">
+        <div class="chat-header">Chat with EMA made by ABS EMON</div>
+        <div id="chatMessages"></div>
+        <div id="inputGroup">
+            <input type="text" id="userInput" placeholder="Type your message...">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const OPENROUTER_API_KEY = "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";
+        const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+        // Predefined responses for common queries
+        const manualReplies = {
+            "what's your name": "My name is EMA made by ABS EMON.",
+            "your name": "My name is ABS EMON made by EMON.",
+            "how are you": "I'm just a chatbot, but thanks for asking! I'm ready to assist you.",
+            "who made you": "I was created by ABS EMON.",
+            "who is your creator": "I was created by ABS EMON.",
+            "what can you do": "I can assist you with basic queries and provide helpful information.",
+            "hello": "Hello! How can I help you today?",
+            "hi": "Hi there! What can I do for you?"
+        };
+
+        function startChat() {
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+        }
+
+        function appendMessage(message, isUser) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+            const messageLower = message.toLowerCase();
+
+            if (!message) return;
+
+            appendMessage(message, true);
+            userInput.value = '';
+
+            // Check if message matches predefined replies
+            const manualReply = getManualReply(messageLower);
+            if (manualReply) {
+                appendMessage(manualReply, false);
+                return;
+            }
+
+            // Otherwise, call OpenRouter API
+            appendMessage("Typing...", false);
+            const typingIndicator = document.querySelector('.bot-message:last-child');
+
+            try {
+                const response = await fetch(OPENROUTER_API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                        "HTTP-Referer": window.location.href,
+                        "X-Title": "Chatbot",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": "deepseek/deepseek-chat:free",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": message
+                            }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                const botResponse = data.choices[0].message.content;
+                typingIndicator.textContent = botResponse;
+            } catch (error) {
+                console.error("Error fetching response from OpenRouter API:", error);
+                typingIndicator.textContent = "Sorry, I encountered an error. Please try again.";
+            }
+        }
+
+        function getManualReply(userMessage) {
+            for (const key in manualReplies) {
+                if (userMessage.includes(key)) {
+                    return manualReplies[key];
+                }
+            }
+            return null;
+        }
+
+        document.getElementById('userInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
